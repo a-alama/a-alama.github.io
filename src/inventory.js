@@ -1,7 +1,5 @@
 "use strict";
 
-import { getItem, getItemFromKey, item_templates } from "./items.js";
-
 //extended by character and traders, as their inventories are supposed to work the same way
 class InventoryHaver {
     
@@ -11,44 +9,33 @@ class InventoryHaver {
 
     /**
      * @description adds items from the list to inventory; don't use this method directly, there are other methods that call this one and take care of display
-     * @param {Array} items - [{item_key, count, item_id (if no key), quality (optional if no key)},...]
+     * @param {Array} items - [{item, count},...]
      */
     add_to_inventory(items) {
         let anything_new = false;
         for(let i = 0; i < items.length; i++){
-            let item_key;
-            if(items[i].item_key){
-                item_key = items[i].item_key;
-            } else {
-                //this part is so stupid
-                //but at least it wont break if code for creating inventory keys changes
-                let item;
-                if(items[i].quality) {
-                    item = getItem({...item_templates[items[i].item_id], quality: items[i].quality});
-                } else {
-                    item = getItem({...item_templates[items[i].item_id]});
-                }
-                item_key = item.getInventoryKey();
-            } 
-            if(!(item_key in this.inventory)) //not in inventory
+            if(!(items[i].item.getInventoryKey() in this.inventory)) //not in inventory
             {
                 if(!items[i].count) {
                     items[i].count = 1;
                 }
-                const item = getItemFromKey(item_key);
-                this.inventory[item_key] = {item, count: items[i].count};
+                this.inventory[items[i].item.getInventoryKey()] = items[i];
                 anything_new = true;
-            } else { //in inventory
-                this.inventory[item_key].count += (items[i].count || 1);
+            }
+            else //in inventory 
+            {
+                this.inventory[items[i].item.getInventoryKey()].count += (items[i].count || 1);
             }
         }
         return anything_new;
     }
 
     /**
-     * @description removes specified items (array of {item_key, count}) from the inventory; don't use this method directly, there are other methods that call this one and take care of display
-     * @param {Array} items [{item_key, item_count}]
-     **/
+     * @description removes specified items (array of {item_key, item_count}) from the inventory; don't use this method directly, there are other methods that call this one and take care of display
+     * @param {Array} items
+     * @param {*} item_key inventory key of the item
+     * @param {*} item_count number of items to remove
+     *      */
     remove_from_inventory(items) {
         for(let i = 0; i < items.length; i++){       
             if(items[i].item_key in this.inventory) { //check if its in inventory, just in case, probably not needed

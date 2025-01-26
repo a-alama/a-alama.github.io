@@ -1,25 +1,24 @@
 "use strict";
 
+import {item_templates, getItem} from "./items.js";
+
 let enemy_templates = {};
 let enemy_killcount = {};
 //enemy templates; locations create new enemies based on them
 
 class Enemy {
-    constructor({
-        name, 
-        id,
-        description, 
-        xp_value = 1, 
-        stats, 
-        rank,
-        loot_list = [], 
-        size = "small",
-        add_to_bestiary = true,
-        tags = [],
-    }) {
+    constructor({name, 
+                 description, 
+                 xp_value = 1, 
+                 stats, 
+                 rank,
+                 loot_list = [], 
+                 size = "small",
+                 add_to_bestiary = true,
+                 tags = [],
+                }) {
                     
         this.name = name;
-        this.id = id || name;
         this.rank = rank; //only for the bestiary order; higher rank => higher in display
         this.description = description; //try to keep it short
         this.xp_value = xp_value;
@@ -36,7 +35,7 @@ class Enemy {
         this.add_to_bestiary = add_to_bestiary; //generally set it false only for SOME of challenges and keep true for everything else
 
         if(size !== "small" && size !== "medium" && size !== "large") {
-            throw new Error(`No such enemy size option as "${size}"!`);
+            throw new Error(`No such enemy size option as "size"!`);
         } else {
             this.size = size;
         }
@@ -50,6 +49,10 @@ class Enemy {
         
         for (let i = 0; i < this.loot_list.length; i++) {
             item = this.loot_list[i];
+            if(!item_templates[item.item_name]) {
+                console.warn(`Tried to loot an item "${item.item_name}" from "${this.name}", but such an item doesn't exist!`);
+                continue;
+            }
             if (item.chance * this.get_droprate_modifier() >= Math.random()) {
                 // checks if it should drop
                 let item_count = 1;
@@ -57,7 +60,8 @@ class Enemy {
                     item_count = Math.round(Math.random() * (item["count"]["max"] - item["count"]["min"]) + item["count"]["min"]);
                     // calculates how much drops (from range min-max, both inclusive)
                 }
-                loot.push({item_id: item.item_name, "count": item_count });
+
+                loot.push({ "item": getItem(item_templates[item.item_name]), "count": item_count });
             }
         }
 
@@ -145,20 +149,6 @@ class Enemy {
             {item_name: "Weak monster bone", chance: 0.005},
         ]
     });
-    enemy_templates["Wall rat"] = new Enemy({
-        name: "Wall rat",
-        description: "They don't live in the walls, they ARE the walls. Insane writhing masses of teeth, fangs, and tails, that make no logical sense.",
-        xp_value: 20,
-        rank: 6,
-        size: "large",
-        tags: ["living", "beast", "wolf rat", "monster", "eldritch"],
-        stats: {health: 800, attack: 50, agility: 20, dexterity: 80, intuition: 80, magic: 0, attack_speed: 2, defense: 30},
-        loot_list: [
-            {item_name: "Rat tail", chance: 0.1},
-            {item_name: "Rat fang", chance: 0.1},
-            {item_name: "Rat pelt", chance: 0.05},
-        ]
-    });
 
     enemy_templates["Starving wolf"] = new Enemy({
         name: "Starving wolf", description: "A large, wild and hungry canine", 
@@ -208,41 +198,13 @@ class Enemy {
         xp_value: 8,
         rank: 4,
         tags: ["living", "beast"],
-        stats: {health: 300, attack: 50, agility: 30, dexterity: 40, intuition: 40, magic: 0, attack_speed: 1, defense: 25},
+        stats: {health: 300, attack: 40, agility: 30, dexterity: 40, intuition: 40, magic: 0, attack_speed: 1, defense: 25},
         loot_list: [
             {item_name: "Boar hide", chance: 0.04},
             {item_name: "Boar meat", chance: 0.02},
-            {item_name: "Boar tusk", chance: 0.02},
             {item_name: "High quality boar tusk", chance: 0.0005},
         ],
         size: "medium"
-    });
-
-    enemy_templates["Angry mountain goat"] = new Enemy({
-        name: "Angry mountain goat", 
-        description: "It's a mountain goat and it's angry", 
-        xp_value: 15,
-        rank: 6,
-        tags: ["living", "beast"],
-        size: "medium",
-        stats: {health: 1000, attack: 100, agility: 120, dexterity: 120, magic: 0, intuition: 60, attack_speed: 1, defense: 30},
-        loot_list: [
-            {item_name: "Mountain goat hide", chance: 0.04},
-            {item_name: "Goat meat", chance: 0.02},
-            {item_name: "Mountain goat horn", chance: 0.01},
-            {item_name: "Pristine mountain goat horn", chance: 0.0005},
-        ],
-    });
-
-    enemy_templates["Slums thug"] = new Enemy({
-        name: "Slums thug",
-        description: "", 
-        add_to_bestiary: false,
-        xp_value: 10,
-        rank: 5,
-        tags: ["living", "human"],
-        size: "medium",
-        stats: {health: 500, attack: 60, agility: 60, dexterity: 60, magic: 0, intuition: 60, attack_speed: 1.7, defense: 20},
     });
 })();
 
@@ -289,17 +251,6 @@ class Enemy {
         tags: ["living", "human"],
         size: "medium",
         stats: {health: 400, attack: 60, agility: 60, dexterity: 60, magic: 0, intuition: 60, attack_speed: 2, defense: 30},
-    });
-
-    enemy_templates["Angry-looking mountain goat"] = new Enemy({
-        name: "Angry-looking mountain goat", 
-        description: "It's a mountain goat and it's angry", 
-        add_to_bestiary: false,
-        xp_value: 1,
-        rank: 6,
-        tags: ["living", "beast"],
-        size: "medium",
-        stats: {health: 1000, attack: 120, agility: 120, dexterity: 120, magic: 0, intuition: 60, attack_speed: 1, defense: 30},
     });
 })()
 

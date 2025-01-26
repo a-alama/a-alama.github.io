@@ -3,18 +3,16 @@
 const dialogues = {};
 
 class Dialogue {
-    constructor({ 
-        name, 
-        id,
-        starting_text = `Talk to the ${name}`, 
-        ending_text = `Go back`, 
-        is_unlocked = true, 
-        is_finished = false, 
-        textlines = {}, 
-        location_name
-    })  {
+    constructor({ name, 
+                  starting_text = `Talk to the ${name}`, 
+                  ending_text = `Go back`, 
+                  is_unlocked = true, 
+                  is_finished = false, 
+                  textlines = {}, 
+                  location_name
+    }) 
+    {
         this.name = name; //displayed name, e.g. "Village elder"
-        this.id = id || this.name;
         this.starting_text = starting_text;
         this.ending_text = ending_text; //text shown on option to finish talking
         this.is_unlocked = is_unlocked;
@@ -22,16 +20,6 @@ class Dialogue {
         this.textlines = textlines; //all the lines in dialogue
 
         this.location_name = location_name; //this is purely informative and wrong value shouldn't cause any actual issues
-
-        Object.keys(this.textlines).forEach(textline_key => {
-            const textline = this.textlines[textline_key];
-            if(textline.locks_lines) {
-                if(!textline.rewards.locks.textlines[this.id]) {
-                    textline.rewards.locks.textlines[this.id] = [];
-                }
-                textline.rewards.locks.textlines[this.id].push(...textline.locks_lines);
-            }
-        });
     }
 }
 
@@ -41,16 +29,15 @@ class Textline {
                  getText,
                  is_unlocked = true,
                  is_finished = false,
-                 rewards = {textlines: [],
+                 unlocks = {textlines: [],
                             locations: [],
                             dialogues: [],
                             traders: [],
                             stances: [],
                             flags: [],
                             items: [],
-                            locks: {textlines: {}}, //for lines to be locked in diferent dialogues and possibly for other stuff
                             },
-                locks_lines = [], //for lines to be locked in same dialogue
+                locks_lines = {},
                 otherUnlocks,
                 required_flags,
             }) 
@@ -61,24 +48,19 @@ class Textline {
         this.otherUnlocks = otherUnlocks || function(){return;};
         this.is_unlocked = is_unlocked;
         this.is_finished = is_finished;
-        this.rewards = rewards || {};
+        this.unlocks = unlocks || {};
         
-        this.rewards.textlines = rewards.textlines || [];
-        this.rewards.locations = rewards.locations || [];
-        this.rewards.dialogues = rewards.dialogues || [];
-        this.rewards.traders = rewards.traders || [];
-        this.rewards.stances = rewards.stances || [];
-        this.rewards.flags = rewards.flags || [];
-        this.rewards.items = rewards.items || [];
+        this.unlocks.textlines = unlocks.textlines || [];
+        this.unlocks.locations = unlocks.locations || [];
+        this.unlocks.dialogues = unlocks.dialogues || [];
+        this.unlocks.traders = unlocks.traders || [];
+        this.unlocks.stances = unlocks.stances || [];
+        this.unlocks.flags = unlocks.flags || [];
+        this.unlocks.items = unlocks.items || []; //not so much unlocks as simply items that player will receive
         
         this.required_flags = required_flags;
 
         this.locks_lines = locks_lines;
-
-        this.rewards.locks = rewards.locks || {};
-        if(!this.rewards.locks.textlines) {
-            this.rewards.locks.textlines = {};
-        }
         //related text lines that get locked; might be itself, might be some previous line 
         //e.g. line finishing quest would also lock line like "remind me what I was supposed to do"
         //should be alright if it's limited only to lines in same Dialogue
@@ -93,7 +75,7 @@ class Textline {
             "hello": new Textline({
                 name: "Hello?",
                 text: "Hello. Glad to see you got better",
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "village elder", lines: ["what happened", "where am i", "dont remember", "about"]}],
                 },
                 locks_lines: ["hello"],
@@ -104,7 +86,7 @@ class Textline {
                 + `It would seem you were on your way to a nearby town when someone attacked you and hit you really hard in the head.`,
                 is_unlocked: false,
                 locks_lines: ["what happened", "where am i", "dont remember"],
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "village elder", lines: ["ask to leave 1"]}],
                 },
             }),
@@ -114,7 +96,7 @@ class Textline {
                 + `It would seem you were on your way to a nearby town when someone attacked you and hit you really hard in the head.`,
                 is_unlocked: false,
                 locks_lines: ["what happened", "where am i", "dont remember"],
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "village elder", lines: ["ask to leave 1"]}],
                 },
             }),
@@ -124,7 +106,7 @@ class Textline {
                 + `It would seem you were on your way to a nearby town when someone attacked you and hit you really hard in the head.`,
                 is_unlocked: false,
                 locks_lines: ["what happened", "where am i", "dont remember"],
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "village elder", lines: ["ask to leave 1"]}],
                 },
             }),
@@ -138,7 +120,7 @@ class Textline {
                 name: "Great... Thank you for help, but I think I should go there then. Maybe it will help me remember more.",
                 text: "Nearby lands are dangerous and you are still too weak to leave. Do you plan on getting ambushed again?",
                 is_unlocked: false,
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "village elder", lines: ["need to"]}],
                 },
                 locks_lines: ["ask to leave 1"],
@@ -148,9 +130,9 @@ class Textline {
                 text: `You first need to recover, to get some rest and maybe also training, as you seem rather frail... Well, you know what? Killing a few wolf rats could be a good exercise. `
                         +`You could help us clear some field of them, how about that?`,
                 is_unlocked: false,
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "village elder", lines: ["rats", "ask to leave 2", "equipment"]}],
-                    locations: [{location: "Infested field"}],
+                    locations: ["Infested field"],
                     activities: [{location:"Village", activity:"weightlifting"}, {location:"Village",activity:"running"}],
                 },
                 locks_lines: ["need to"],
@@ -161,9 +143,9 @@ class Textline {
                         +`If you need money, try selling him some rat remains. Fangs, tails or pelts, he will buy them all. I have no idea what he does with this stuff...`,
                 is_unlocked: false,
                 locks_lines: ["equipment"],
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "village elder", lines: ["money"]}],
-                    traders: [{trader: "village trader"}]
+                    traders: ["village trader"]
                 }
             }),
             "money": new Textline({
@@ -171,7 +153,7 @@ class Textline {
                 text: "You could help us with some fieldwork. I'm afraid it won't pay too well.",
                 is_unlocked: false,
                 locks_lines: ["money"],
-                rewards: {
+                unlocks: {
                     activities: [{location: "Village", activity: "fieldwork"}],
                 }
             }),
@@ -193,8 +175,8 @@ class Textline {
                         +`Before that, maybe get some sleep? Some folks prepared that shack over there for you. It's clean, it's dry, and it will give you some privacy. `
                         +`Oh, and before I forget, our old craftsman wanted to talk to you.`,
                 is_unlocked: false,
-                rewards: {
-                    locations: [{location: "Nearby cave"}, {location: "Infested field"}, {location: "Shack"}],
+                unlocks: {
+                    locations: ["Nearby cave", "Infested field", "Shack"],
                     textlines: [{dialogue: "village elder", lines: ["ask to leave 3"]}],
                     dialogues: ["old craftsman"],
                 },
@@ -203,8 +185,8 @@ class Textline {
             "ask to leave 3": new Textline({
                 name: "Can I leave the village?",
                 text: "You still need to get stronger.",
-                rewards: {
-                    locations: [{location: "Nearby cave"}, {location: "Infested field"}],
+                unlocks: {
+                    locations: ["Nearby cave", "Infested field"],
                     dialogues: ["old craftsman"],
                 },
                 is_unlocked: false,
@@ -213,9 +195,9 @@ class Textline {
                 name: "I cleared the cave. Most of it, at least",
                 text: `Then I can't call you "too weak" anymore, can I? You are free to leave whenever you want, but still, be careful. You might also want to ask the guard for some tips about the outside. He used to be an adventurer.`,
                 is_unlocked: false,
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "village elder", lines: ["ask to leave 4"]}],
-                    locations: [{location: "Forest road"}, {locations: "Infested field"}, {location: "Nearby cave"}],
+                    locations: ["Forest road", "Infested field", "Nearby cave"],
                     dialogues: ["village guard"],
                 },
                 locks_lines: ["ask to leave 3", "rats", "cleared cave"],
@@ -224,8 +206,8 @@ class Textline {
                 name: "Can I leave the village?",
                 text: "You are strong enough, you can leave and come whenever you want.",
                 is_unlocked: false,
-                rewards: {
-                    locations: [{location: "Forest road"}, {location: "Infested field"}, {location: "Nearby cave"}],
+                unlocks: {
+                    locations: ["Forest road", "Infested field", "Nearby cave"],
                     dialogues: ["village guard", "old craftsman"],
                 },
             }),
@@ -247,7 +229,7 @@ class Textline {
                 text: "Ahh, good to see you traveler. I just thought of a little something that could be of help for someone like you. See, young people this days "+
                 "don't care about the good old art of crafting and prefer to buy everything from the store, but I have a feeling that you just might be different. "+
                 "Would you like a quick lesson?",
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "old craftsman", lines: ["learn", "leave"]}],
                 },
                 locks_lines: ["hello"],
@@ -256,7 +238,7 @@ class Textline {
                 name: "Sure, I'm in no hurry.",
                 text: "Ahh, that's great. Well then... \n*[Old man spends some time explaining all the important basics of crafting and providing you with tips]*\n"+
                 "Ahh, and before I forget, here, take these. They will be helpful for gathering necessary materials.",
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "old craftsman", lines: ["remind1", "remind2", "remind3"]}],
                     items: ["Old pickaxe" ,"Old axe", "Old sickle"],
                     flags: ["is_gathering_unlocked", "is_crafting_unlocked"],
@@ -298,7 +280,7 @@ class Textline {
             "hello": new Textline({
                 name: "Hello?",
                 text: "Hello. I see you are finally leaving, huh?",
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "village guard", lines: ["tips", "job"]}],
                 },
                 locks_lines: ["hello"],
@@ -307,7 +289,7 @@ class Textline {
                 name: "Do you maybe have any jobs for me?",
                 is_unlocked: false,
                 text: "You are somewhat combat capable now, so how about you help me and the boys on patrolling? Not much happens, but it pays better than working on fields",
-                rewards: {
+                unlocks: {
                     activities: [{location:"Village", activity:"patrolling"}],
                 },
                 locks_lines: ["job"],
@@ -318,7 +300,7 @@ class Textline {
                 text: `First and foremost, don't rush. It's fine to spend some more time here, to better prepare yourself. `
                 +`There's a lot of dangerous animals out there, much stronger than those damn rats, and in worst case you might even run into some bandits. `
                 +`If you see something that is too dangerous to fight, try to run away.`,
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "village guard", lines: ["teach"]}],
                 },
             }),
@@ -328,8 +310,8 @@ class Textline {
                 text: `Lemme take a look... Yes, it looks like you know some basics. Do you know any proper techniques? No? I thought so. I could teach you the most standard three. `
                 +`They might be more tiring than fighting the "normal" way, but if used in a proper situation, they will be a lot more effective. Two can be easily presented through `
                 + `some sparring, so let's start with it. The third I'll just have to explain. How about that?`,
-                rewards: {
-                    locations: [{location: "Sparring with the village guard (quick)"}, {location: "Sparring with the village guard (heavy)"}],
+                unlocks: {
+                    locations: ["Sparring with the village guard (quick)", "Sparring with the village guard (heavy)"],
                 },
                 locks_lines: ["teach"],
             }),
@@ -344,7 +326,7 @@ class Textline {
                     }
                 },
                 locks_lines: ["quick"],
-                rewards: {
+                unlocks: {
                     stances: ["quick"]
                 }
             }),
@@ -359,7 +341,7 @@ class Textline {
                     }
                 },
                 locks_lines: ["heavy"],
-                rewards: {
+                unlocks: {
                     stances: ["heavy"]
                 }
             }),
@@ -369,7 +351,7 @@ class Textline {
                 text: `It's usually called "broad arc". Instead of focusing on a single target, you make a wide swing to hit as many as possible. ` 
                 +`It might work great against groups of weaker enemies, but it will also significantly reduce the power of your attacks and will be even more tiring than the other two stances.`,
                 locks_lines: ["wide"],
-                rewards: {
+                unlocks: {
                     stances: ["wide"]
                 }
             }),
@@ -391,8 +373,8 @@ class Textline {
             "hello": new Textline({ 
                 name: "Hello? Why are you looking at me like that?",
                 text: "Y-you! You should be dead! *the man pulls out a dagger*",
-                rewards: {
-                    locations: [{location: "Fight off the assailant"}],
+                unlocks: {
+                    locations: ["Fight off the assailant"],
                 },
                 locks_lines: ["hello"],
             }), 
@@ -402,50 +384,15 @@ class Textline {
                 text: "I... We... It was my group that robbed you. I thought you came back from your grave for revenge... Please, I don't know anything. "
                 +"If you want answers, ask my boss. He's somewhere in the town.",
                 locks_lines: ["defeated"],
-                rewards: {
-                    textlines: [{dialogue: "suspicious man", lines: ["behave", "situation"]}],
+                unlocks: {
+                    textlines: [{dialogue: "suspicious man", lines: ["behave"]}],
                 },
             }), 
             "behave": new Textline({ 
                 name: "Are you behaving yourself?",
                 is_unlocked: false,
-                text: "Y-yes, boss! Please don't beat me again!",
+                text: "Y-yes! Please don't beat me again!",
                 locks_lines: ["defeated"],
-                rewards: {
-                    textlines: [{dialogue: "suspicious man", lines: ["situation", "boss"]}],
-                },
-            }), 
-            "boss": new Textline({ 
-                name: "Stop calling me 'boss'",
-                is_unlocked: false,
-                text: "Y-yes, boss! I'm sorry, boss!",
-                locks_lines: ["boss"],
-            }), 
-            "situation": new Textline({
-                name: "By the way, how are things in this slum?",
-                is_unlocked: false,
-                text: "A-as you can see and hear boss, it's pretty b-bad, but it can't be helped without taking out the g-gang...",
-                locks_lines: ["situation"],
-                rewards: {
-                    textlines: [{dialogue: "suspicious man", lines: ["gang", "boss"]}],
-                },
-            }),
-            "gang": new Textline({
-                name: "What gang?",
-                is_unlocked: false,
-                text: "It's j-just a gang, they don't have any name, boss. Their hideout is over t-there, you should stay away from them.",
-                locks_lines: ["gang", "behave"],
-                rewards: {
-                    textlines: [{dialogue: "suspicious man", lines: ["gang", "behave 2"]}],
-                    locations: [
-                        {location: "Gang hideout"},
-                    ],
-                },
-            }),
-            "behave 2": new Textline({ 
-                name: "Are you behaving yourself?",
-                is_unlocked: false,
-                text: "Y-yes, I didn't do anything bad since the last time, boss!",
             }), 
         }
     });
@@ -455,7 +402,7 @@ class Textline {
             "hello": new Textline({ 
                 name: "Hello",
                 text: "Hello stranger",
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "farm supervisor", lines: ["things", "work", "animals", "fight", "fight0"]}],
                 },
                 locks_lines: ["hello"],
@@ -464,7 +411,7 @@ class Textline {
                 name: "Do you have any work with decent pay?",
                 is_unlocked: false,
                 text: "We sure could use more hands. Feel free to help my boys on the fields whenever you have time!",
-                rewards: {
+                unlocks: {
                     activities: [{location: "Town farms", activity: "fieldwork"}],
                 },
                 locks_lines: ["work"],
@@ -474,7 +421,7 @@ class Textline {
                 is_unlocked: false,
                 text: "Sorry, I'm not allowed to. I could however let you take some stuff in exchange for physical work, and it just so happens our sheep need shearing.",
                 required_flags: {yes: ["is_gathering_unlocked"]},
-                rewards: {
+                unlocks: {
                     activities: [{location: "Town farms", activity: "animal care"}],
                 },
                 locks_lines: ["animals"],
@@ -491,10 +438,10 @@ class Textline {
                 text: "Actually yes. There's that annoying group of boars that keep destroying our fields. "
                 + "They don't do enough damage to cause any serious problems, but I would certainly be calmer if someone took care of them. "
                 + "Go to the forest and search for a clearing in north, that's where they usually roam when they aren't busy eating our crops."
-                + "I can of course pay you for that, but keep in mind it won't be that much. 2 silver coins is most I can offer, I'm running on a strict budget here.",
+                + "I can of course pay you for that, but keep in mind it won't be that much, I'm running on a strict budget here.",
                 required_flags: {yes: ["is_deep_forest_beaten"]},
-                rewards: {
-                    locations: [{location: "Forest clearing"}],
+                unlocks: {
+                    locations: ["Forest clearing"],
                 },
                 locks_lines: ["fight"],
             }),
@@ -502,7 +449,7 @@ class Textline {
                 is_unlocked: false,
                 name: "How are things around here?",
                 text: "Nothing to complain about. Trouble is rare, pay is good, and the soil is as fertile as my wife!",
-                rewards: {
+                unlocks: {
                     textlines: [{dialogue: "farm supervisor", lines: ["animals", "fight", "fight0"]}],
                 }
             }), 
@@ -511,68 +458,11 @@ class Textline {
                 name: "I took care of those boars",
                 text: "Really? That's great! Here, this is for you.",
                 locks_lines: ["defeated boars"],
-                rewards: {
-                    money: 2000,
+                unlocks: {
+                    money: 1000,
                 }
             }), 
         }
-    });
-
-    dialogues["cute little rat"] = new Dialogue({
-        "name": "cute little rat",
-        "hello": new Textline({ 
-            name: "Uhm, hi?",
-            text: "Hello, o mighty adventurer!",
-            rewards: {
-                textlines: [{dialogue: "cute little rat", lines: ["what"]}],
-            },
-            locks_lines: ["hello"],
-        }),
-        "what": new Textline({ 
-            name: "What... are you?",
-            text: "Me name be Rator Rathai, the Rat Prince Who Be Promised!",
-            rewards: {
-                textlines: [{dialogue: "cute little rat", lines: ["walls"]}],
-            },
-            locks_lines: ["what"],
-        }),
-        "who": new Textline({ 
-            name: "Promised by who?",
-            text: "By my papa, the great Rat God, of course! The He who bring infite rat blessings uppon this dimension!",
-            rewards: {
-                textlines: [{dialogue: "cute little rat", lines: ["monsters"]}],
-            },
-            locks_lines: ["who"],
-        }),
-        "monsters": new Textline({ 
-            name: "Are those strange monsters that I fought on the way amonst those 'blessings' you speak of?",
-            text: "No no, they don't be blessings, they be the blessed! Creatures of all the creation, who embrace the gift of my papa! Monsters, animals, adventurers, plants, papa accepts all!",
-            rewards: {
-                textlines: [{dialogue: "cute little rat", lines: ["walls", "kill", "mind"]}],
-            },
-            locks_lines: ["monsters"],
-        }),
-        "mind": new Textline({ 
-            name: "And you don't mind that I slaughtered them?",
-            text: "Why? It's the rule of the world that the strong kill the weak and papa believe it too! Besides, maybe you be join us one day? Embrace the truth of your inner rat and reject the human shell!",
-            locks_lines: ["mind"],
-        }),
-        "walls": new Textline({ 
-            name: "So some of those wall-like things could have once been human?",
-            text: "Only in soul. They once be acolytes of papa, but not be worthy so be cast down to guard the path.",
-            rewards: {
-                textlines: [{dialogue: "cute little rat", lines: ["walls"]}],
-            },
-            locks_lines: ["monsters"],
-        }),
-        "kill": new Textline({ 
-            name: "Okay, give me one reason why I shouldn't kill you.",
-            text: "I don't mind, if I die my soul be return to papa. But my blood be full of papa power, don't do it unless you want to face him personally.",
-            rewards: {
-                textlines: [{dialogue: "cute little rat", lines: ["walls"]}],
-            },
-            locks_lines: ["kill"],
-        }),
     });
 })();
 
